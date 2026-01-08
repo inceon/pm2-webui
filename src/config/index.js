@@ -13,6 +13,12 @@ const config = {
     HTTPS_ENABLED: process.env.HTTPS_ENABLED === 'true',
     HTTPS_KEY_PATH: process.env.HTTPS_KEY_PATH || null,
     HTTPS_CERT_PATH: process.env.HTTPS_CERT_PATH || null,
+    // Telegram Bot Configuration
+    TELEGRAM_ENABLED: process.env.TELEGRAM_ENABLED === 'true',
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || null,
+    TELEGRAM_ALLOWED_USER_IDS: process.env.TELEGRAM_ALLOWED_USER_IDS
+        ? process.env.TELEGRAM_ALLOWED_USER_IDS.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
+        : [],
     DEFAULTS: {
         LINES_PER_REQUEST: 50,
         BCRYPT_HASH_ROUNDS: 10,

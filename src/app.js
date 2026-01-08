@@ -17,6 +17,7 @@ import Koa from 'koa';
 import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/error-handler.js';
 import router from './routes/index.js';
+import { startTelegramBot } from './services/telegram.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,3 +103,6 @@ if (config.HTTPS_ENABLED) {
         console.log(`Application started at http://${config.HOST}:${config.PORT}`);
     });
 }
+
+// Start Telegram bot (if configured)
+startTelegramBot();
