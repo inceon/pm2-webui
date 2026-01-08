@@ -700,7 +700,123 @@ View `.env` file contents for each app directory.
 
 ---
 
-## Upgrading
+## Git Update Management
+
+PM2 WebUI can automatically detect and pull updates from git repositories for applications managed by PM2.
+
+### Features
+
+- **Automatic Update Detection**: Checks for new commits on the remote repository
+- **Visual Indicators**: Shows update status in the app detail view
+- **One-Click Updates**: Pull updates directly from the web interface
+- **Commit Tracking**: Displays current and remote commit hashes
+- **Admin-Only Access**: Only admin users can pull updates
+
+### How It Works
+
+When viewing an application detail page:
+
+1. **Automatic Check**: PM2 WebUI automatically fetches from the remote and compares commits
+2. **Update Alert**: If updates are available, an info alert shows the number of commits behind
+3. **Pull Updates**: Click the "Pull Updates" button to execute `git pull`
+4. **Confirmation**: A confirmation dialog ensures intentional updates
+5. **Result**: After successful pull, the new commit hash is displayed
+
+### Requirements
+
+For the git update feature to work, the application must:
+
+- Be in a git repository with a remote configured
+- Have a clean working directory (no uncommitted changes)
+- Have proper git credentials configured (for private repositories)
+
+### Usage
+
+#### Viewing Update Status
+
+1. Navigate to any application detail page
+2. Look for the git section showing:
+   - **Git Branch**: Current branch name (e.g., `master`, `main`)
+   - **Git Commit**: Current commit hash (e.g., `0a755e3`)
+   - **Update Status**: Alert banner if updates are available
+
+#### Checking for Updates
+
+- **Automatic**: Updates are checked when the page loads
+- **Manual**: Click the "Check for Updates" or "Refresh" button
+
+#### Pulling Updates
+
+1. Click the **"Pull Updates"** button in the update alert
+2. Confirm the action in the dialog
+3. Wait for the pull operation to complete
+4. Review the result message
+5. **Important**: Restart or reload the application to apply changes
+
+### Example Workflow
+
+```bash
+# Scenario: You pushed new commits to your app's repository
+
+1. Open PM2 WebUI → Navigate to your app
+2. See alert: "2 commits behind"
+3. Click "Pull Updates"
+4. Confirm the dialog
+5. Success message: "Updates pulled successfully! New commit: abc1234"
+6. Click "Reload" or "Restart" button to apply changes
+```
+
+### API Endpoints
+
+The git update feature exposes these API endpoints:
+
+- `GET /api/apps/:appName/git/check-updates`
+  - Check if updates are available
+  - Returns update status and commit information
+  - Accessible to all authenticated users
+
+- `POST /api/apps/:appName/git/pull`
+  - Pull updates from remote repository
+  - Returns new commit hash and git output
+  - **Admin only** - requires admin role
+
+### Troubleshooting
+
+#### "Unable to check for updates"
+
+- Ensure the application directory is a git repository
+- Verify remote is configured: `git remote -v`
+- Check network access to git server
+
+#### Pull fails with merge conflicts
+
+- The application has uncommitted local changes
+- Resolve manually via SSH: `cd /path/to/app && git status`
+- Stash or commit local changes, then try again
+
+#### Authentication errors
+
+For private repositories, configure credentials:
+
+```bash
+# SSH (recommended)
+git remote set-url origin git@github.com:user/repo.git
+
+# HTTPS with credential helper
+git config --global credential.helper store
+git pull  # Enter credentials once
+```
+
+### Security Considerations
+
+- Only **admin users** can pull updates (viewers cannot)
+- CSRF protection is enforced on pull requests
+- Git credentials must be configured at OS level
+- Consider using SSH keys for authentication
+
+---
+
+## Upgrading PM2 WebUI
 
 ```bash
 cd pm2-webui
@@ -735,6 +851,8 @@ sudo systemctl restart pm2-webui  # If using systemd
 | Restart App | Click app → Restart button |
 | Reload App | Click app → Reload button (0 downtime) |
 | Stop App | Click app → Stop button |
+| Check Updates | App detail page → Auto-check on load |
+| Pull Updates | Click "Pull Updates" in update alert (admin only) |
 
 ---
 

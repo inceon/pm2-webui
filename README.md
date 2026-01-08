@@ -7,6 +7,7 @@ Opensource Alternative to PM2 Plus
 - Log Viewer :white_check_mark:
 - Responsive UI :white_check_mark:
 - Telegram Bot Integration :white_check_mark:
+- Git Update Detection & Pull :white_check_mark:
 - Manual and Auto(Github webhooks) Deployment
 - Environment Management
 
@@ -41,6 +42,7 @@ npm run start:dev
 - [x] add HTTPS support
 - [x] migrate to ES Modules (ESM)
 - [x] add Telegram bot integration (status, control, crash alerts)
+- [x] add git update detection and pull functionality
 
 #### TODO
 - [ ] support for relative paths

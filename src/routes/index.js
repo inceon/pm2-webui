@@ -4,7 +4,7 @@ import Router from '@koa/router';
 import { listApps, describeApp, reloadApp, restartApp, stopApp } from '../providers/pm2/api.js';
 import { validateAdminUser } from '../services/admin.service.js';
 import { readLogsReverse } from '../utils/read-logs.util.js';
-import { getCurrentGitBranch, getCurrentGitCommit } from '../utils/git.util.js';
+import { getCurrentGitBranch, getCurrentGitCommit, checkForUpdates, pullUpdates } from '../utils/git.util.js';
 import { getEnvFileContent, writeEnvFileContent } from '../utils/env.util.js';
 import { isAuthenticated, checkAuthentication } from '../middlewares/auth.js';
 import { requireRole } from '../middlewares/role-check.js';
@@ -14,17 +14,17 @@ const router = new Router();
 const ansiConvert = new AnsiConverter();
 
 const loginRateLimiter = RateLimit.middleware({
-    interval: 2*60*1000, // 2 minutes
+    interval: 2 * 60 * 1000, // 2 minutes
     max: 100,
     prefixKey: '/login' // to allow the bdd to Differentiate the endpoint 
-  });
+});
 
 router.get('/', async (ctx) => {
     return ctx.redirect('/login')
 })
 
 router.get('/login', loginRateLimiter, checkAuthentication, async (ctx) => {
-    return await ctx.render('auth/login', {layout : false, login: { username: '', password:'', error: null }, csrf: ctx.state._csrf})
+    return await ctx.render('auth/login', { layout: false, login: { username: '', password: '', error: null }, csrf: ctx.state._csrf })
 })
 
 router.post('/login', loginRateLimiter, checkAuthentication, async (ctx) => {
@@ -35,8 +35,8 @@ router.post('/login', loginRateLimiter, checkAuthentication, async (ctx) => {
         ctx.session.user = user; // Store user info including role
         return ctx.redirect('/apps')
     }
-    catch(err){
-        return await ctx.render('auth/login', {layout : false, login: { username, password, error: err.message }, csrf: ctx.state._csrf})
+    catch (err) {
+        return await ctx.render('auth/login', { layout: false, login: { username, password, error: err.message }, csrf: ctx.state._csrf })
     }
 })
 
@@ -53,7 +53,7 @@ router.get('/apps', isAuthenticated, async (ctx) => {
     }
 });
 
-router.get('/logout', (ctx)=>{
+router.get('/logout', (ctx) => {
     ctx.session = null;
     return ctx.redirect('/login')
 })
@@ -74,10 +74,11 @@ router.get('/apps/:appName', isAuthenticated, async (ctx) => {
 
         app.git_branch = await getCurrentGitBranch(app.pm2_env_cwd)
         app.git_commit = await getCurrentGitCommit(app.pm2_env_cwd)
+        app.git_update_status = await checkForUpdates(app.pm2_env_cwd)
         app.env_file = await getEnvFileContent(app.pm2_env_cwd)
 
-        const stdout = await readLogsReverse({filePath: app.pm_out_log_path})
-        const stderr = await readLogsReverse({filePath: app.pm_err_log_path})
+        const stdout = await readLogsReverse({ filePath: app.pm_out_log_path })
+        const stderr = await readLogsReverse({ filePath: app.pm_err_log_path })
 
         stdout.lines = stdout.lines.map(log => ansiConvert.toHtml(log)).join('<br/>')
         stderr.lines = stderr.lines.map(log => ansiConvert.toHtml(log)).join('<br/>')
@@ -116,7 +117,7 @@ router.get('/api/apps/:appName/logs/:logType', isAuthenticated, async (ctx) => {
         }
 
         const filePath = logType === 'stdout' ? app.pm_out_log_path : app.pm_err_log_path
-        let logs = await readLogsReverse({filePath, nextKey})
+        let logs = await readLogsReverse({ filePath, nextKey })
 
         logs.lines = logs.lines.map(log => ansiConvert.toHtml(log)).join('<br/>')
 
@@ -288,6 +289,67 @@ router.post('/api/apps/:appName/env', isAuthenticated, requireRole('admin'), asy
         ctx.body = { success: true, message: 'Environment file saved successfully' };
     } catch (err) {
         console.error('Failed to save env file:', err);
+        ctx.body = { success: false, message: err.message };
+    }
+});
+
+router.get('/api/apps/:appName/git/check-updates', isAuthenticated, async (ctx) => {
+    try {
+        const { appName } = ctx.params;
+
+        if (!appName) {
+            ctx.throw(400, 'App name is required');
+        }
+
+        const app = await describeApp(appName);
+
+        if (!app) {
+            ctx.throw(404, 'App not found');
+        }
+
+        const updateStatus = await checkForUpdates(app.pm2_env_cwd);
+        ctx.body = { success: true, updateStatus };
+    } catch (err) {
+        console.error('Failed to check for updates:', err);
+        ctx.body = { success: false, message: err.message };
+    }
+});
+
+router.post('/api/apps/:appName/git/pull', isAuthenticated, requireRole('admin'), async (ctx) => {
+    try {
+        const { appName } = ctx.params;
+
+        if (!appName) {
+            ctx.throw(400, 'App name is required');
+        }
+
+        const app = await describeApp(appName);
+
+        if (!app) {
+            ctx.throw(404, 'App not found');
+        }
+
+        const result = await pullUpdates(app.pm2_env_cwd);
+
+        if (result.success) {
+            // Get the new commit after pull
+            const newCommit = await getCurrentGitCommit(app.pm2_env_cwd);
+            ctx.body = {
+                success: true,
+                message: result.message,
+                output: result.output,
+                newCommit
+            };
+        } else {
+            ctx.body = {
+                success: false,
+                message: result.message,
+                error: result.error,
+                output: result.output
+            };
+        }
+    } catch (err) {
+        console.error('Failed to pull updates:', err);
         ctx.body = { success: false, message: err.message };
     }
 });

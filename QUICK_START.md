@@ -89,9 +89,11 @@ See all PM2 processes with:
 - Paginated for easy browsing
 - Color-coded for better readability
 
-### See Git Info
-- Current branch
-- Latest commit hash
+### Git Update Management
+- See current branch and commit hash
+- **Automatic update detection** - see how many commits behind remote
+- **One-click pull updates** - pull latest code directly from the dashboard
+- Admin-only access for pulling updates
 
 ### Telegram Bot (Optional)
 - Control apps from Telegram (`/status`, `/restart_app`, `/stop_app`)
@@ -197,10 +199,9 @@ sudo systemctl start pm2-webui
 
 1. **Check Status**: Open web dashboard → see all apps at a glance
 2. **View Logs**: Click app name → scroll through logs
-3. **Deploy Update**: 
-   - SSH to server
-   - Pull latest code
-   - Return to dashboard → Click "Reload" button (zero downtime!)
+3. **Deploy Update** (Two Ways):
+   - **Option A (Web UI)**: Click "Pull Updates" button → Click "Reload" (zero downtime!)
+   - **Option B (Manual)**: SSH to server → Pull code → Return to dashboard → Click "Reload"
 
 ### Troubleshooting:
 

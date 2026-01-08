@@ -78,6 +78,65 @@
                 </svg>
                 Git Commit : <%= app.git_commit %></h4>
               <% } %>
+              <% if(app.git_update_status && app.git_update_status.hasUpdates){ %>
+              <div class="alert alert-info mb-3" role="alert">
+                <div class="d-flex">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-download" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                      <polyline points="7 11 12 16 17 11" />
+                      <line x1="12" y1="4" x2="12" y2="16" />
+                    </svg>
+                  </div>
+                  <div class="ms-2">
+                    <h4 class="alert-title">Updates Available</h4>
+                    <div class="text-muted"><%= app.git_update_status.message %></div>
+                    <div class="mt-2">
+                      <button class="btn btn-sm btn-primary" onclick="pullGitUpdates()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                          <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                          <polyline points="7 11 12 16 17 11" />
+                          <line x1="12" y1="4" x2="12" y2="16" />
+                        </svg>
+                        Pull Updates
+                      </button>
+                      <button class="btn btn-sm btn-ghost-primary" onclick="checkForUpdates()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                          <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                          <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                        </svg>
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <% } else if(app.git_commit && app.git_update_status){ %>
+              <div class="alert alert-success mb-3" role="alert">
+                <div class="d-flex">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M5 12l5 5l10 -10" />
+                    </svg>
+                  </div>
+                  <div class="ms-2">
+                    <div class="text-muted"><%= app.git_update_status.message %></div>
+                    <button class="btn btn-sm btn-ghost-success mt-1" onclick="checkForUpdates()">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                        <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                      </svg>
+                      Check for Updates
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <% } %>
               <% if(app.env_file){ %>
               <h4 class="text-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-text" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -393,4 +452,48 @@
 
   // Clean up on page unload
   window.addEventListener('beforeunload', stopRealtimeLogs);
+
+  // Git update functions
+  async function checkForUpdates() {
+    try {
+      const response = await fetch(`/api/apps/<%= app.name %>/git/check-updates`);
+      const data = await response.json();
+
+      if (data.success && data.updateStatus) {
+        // Reload the page to show updated status
+        window.location.reload();
+      } else {
+        alert('Failed to check for updates: ' + (data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Error checking for updates: ' + err.message);
+    }
+  }
+
+  async function pullGitUpdates() {
+    if (!confirm('Are you sure you want to pull updates? This will update the application code.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/apps/<%= app.name %>/git/pull`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '<%= csrf %>'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Updates pulled successfully!\n\nNew commit: ' + (data.newCommit || 'N/A') + '\n\nNote: You may need to reload or restart the application for changes to take effect.');
+        window.location.reload();
+      } else {
+        alert('Failed to pull updates:\n' + (data.message || 'Unknown error') + '\n\n' + (data.output || ''));
+      }
+    } catch (err) {
+      alert('Error pulling updates: ' + err.message);
+    }
+  }
 </script>

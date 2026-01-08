@@ -2,6 +2,36 @@
 
 ## [Unreleased] - 2025-01-08
 
+### Git Update Management
+
+#### Features
+- **Automatic update detection** - Checks for new commits on remote repository
+  - Displays update status in app detail view
+  - Shows number of commits behind remote
+  - Visual indicators (info alert for updates, success alert when up-to-date)
+- **One-click git pull** - Pull updates directly from the web interface
+  - Admin-only functionality with confirmation dialog
+  - Displays new commit hash after successful pull
+  - Shows git output for troubleshooting
+- **Manual refresh** - Check for updates on demand
+
+#### API Endpoints Added
+- `GET /api/apps/:appName/git/check-updates` - Check for available updates
+- `POST /api/apps/:appName/git/pull` - Pull updates from remote (admin only)
+
+#### Functions Added (git.util.js)
+- `getRemoteGitCommit()` - Fetch latest remote commit hash
+- `checkForUpdates()` - Compare local and remote commits
+- `pullUpdates()` - Execute git pull operation
+
+#### UI Enhancements
+- Update status banner in app detail page
+- "Pull Updates" button with confirmation
+- "Check for Updates" / "Refresh" button
+- Real-time update notifications
+
+---
+
 ### Telegram Bot Integration
 
 #### Features
