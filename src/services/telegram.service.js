@@ -1,7 +1,8 @@
 import TelegramBot from 'node-telegram-bot-api';
 import pm2 from 'pm2';
 import config from '../config/index.js';
-import { listApps, restartApp, stopApp, reloadApp } from '../providers/pm2/api.js';
+import { listApps, restartApp, stopApp, reloadApp, describeApp } from '../providers/pm2/api.js';
+import { getCurrentGitBranch, getCurrentGitCommit, checkForUpdates, pullUpdates } from '../utils/git.util.js';
 
 let bot = null;
 let pm2Bus = null;
@@ -199,6 +200,9 @@ function startTelegramBot() {
                 `/stop_app &lt;name|id&gt; - Stop a process\n` +
                 `/restart_app &lt;name|id&gt; - Restart a process\n` +
                 `/reload_app &lt;name|id&gt; - Reload a process\n` +
+                `/git_status &lt;name|id&gt; - Show git info\n` +
+                `/git_check &lt;name|id&gt; - Check for updates\n` +
+                `/git_pull &lt;name|id&gt; - Pull git updates\n` +
                 `/help - Show this help message`;
 
             bot.sendMessage(msg.chat.id, welcomeMessage, { parse_mode: 'HTML' });
@@ -209,7 +213,7 @@ function startTelegramBot() {
             if (!checkAccess(msg)) return;
 
             const helpMessage = `📚 <b>PM2 WebUI Bot Help</b>\n\n` +
-                `<b>Commands:</b>\n\n` +
+                `<b>Process Management:</b>\n\n` +
                 `/status - Show status of all PM2 processes\n\n` +
                 `/start_app &lt;name|id&gt; - Start a stopped process\n` +
                 `  Example: /start_app my-api\n\n` +
@@ -219,6 +223,13 @@ function startTelegramBot() {
                 `  Example: /restart_app my-api\n\n` +
                 `/reload_app &lt;name|id&gt; - Gracefully reload a process\n` +
                 `  Example: /reload_app my-api\n\n` +
+                `<b>Git Management:</b>\n\n` +
+                `/git_status &lt;name|id&gt; - Show git branch and commit\n` +
+                `  Example: /git_status my-api\n\n` +
+                `/git_check &lt;name|id&gt; - Check for available updates\n` +
+                `  Example: /git_check my-api\n\n` +
+                `/git_pull &lt;name|id&gt; - Pull updates from remote\n` +
+                `  Example: /git_pull my-api\n\n` +
                 `💡 You can use either the process name or its PM2 ID.`;
 
             bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'HTML' });
@@ -306,6 +317,131 @@ function startTelegramBot() {
                 bot.sendMessage(msg.chat.id, `✅ Process <b>${processName}</b> reloaded successfully.`, { parse_mode: 'HTML' });
             } catch (err) {
                 bot.sendMessage(msg.chat.id, `❌ Failed to reload <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
+            }
+        });
+
+        // /git_status command
+        bot.onText(/\/git_status(?:\s+(.+))?/, async (msg, match) => {
+            if (!checkAccess(msg)) return;
+
+            const processName = match[1]?.trim();
+            if (!processName) {
+                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_status <name|id>');
+                return;
+            }
+
+            try {
+                const app = await describeApp(processName);
+                if (!app) {
+                    bot.sendMessage(msg.chat.id, `❌ Process <b>${processName}</b> not found.`, { parse_mode: 'HTML' });
+                    return;
+                }
+
+                const branch = await getCurrentGitBranch(app.pm2_env_cwd);
+                const commit = await getCurrentGitCommit(app.pm2_env_cwd);
+
+                if (!branch && !commit) {
+                    bot.sendMessage(msg.chat.id, `ℹ️ <b>${app.name}</b> is not in a git repository.`, { parse_mode: 'HTML' });
+                    return;
+                }
+
+                let message = `🔀 <b>Git Status for ${app.name}</b>\n\n`;
+                if (branch) message += `📌 Branch: <code>${branch}</code>\n`;
+                if (commit) message += `📝 Commit: <code>${commit}</code>\n`;
+                message += `\n💡 Use /git_check ${processName} to check for updates`;
+
+                bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' });
+            } catch (err) {
+                bot.sendMessage(msg.chat.id, `❌ Failed to get git status for <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
+            }
+        });
+
+        // /git_check command
+        bot.onText(/\/git_check(?:\s+(.+))?/, async (msg, match) => {
+            if (!checkAccess(msg)) return;
+
+            const processName = match[1]?.trim();
+            if (!processName) {
+                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_check <name|id>');
+                return;
+            }
+
+            try {
+                bot.sendMessage(msg.chat.id, `🔍 Checking for updates for <b>${processName}</b>...`, { parse_mode: 'HTML' });
+
+                const app = await describeApp(processName);
+                if (!app) {
+                    bot.sendMessage(msg.chat.id, `❌ Process <b>${processName}</b> not found.`, { parse_mode: 'HTML' });
+                    return;
+                }
+
+                const updateStatus = await checkForUpdates(app.pm2_env_cwd);
+
+                if (!updateStatus.currentCommit || !updateStatus.remoteCommit) {
+                    bot.sendMessage(msg.chat.id, `ℹ️ ${updateStatus.message || 'Unable to check for updates'}`, { parse_mode: 'HTML' });
+                    return;
+                }
+
+                let message = `🔀 <b>Update Status for ${app.name}</b>\n\n`;
+                message += `📝 Current: <code>${updateStatus.currentCommit}</code>\n`;
+                message += `📡 Remote: <code>${updateStatus.remoteCommit}</code>\n\n`;
+
+                if (updateStatus.hasUpdates) {
+                    message += `🆕 <b>Updates Available!</b>\n`;
+                    message += `📊 ${updateStatus.message}\n\n`;
+                    message += `💡 Use /git_pull ${processName} to pull updates`;
+                } else {
+                    message += `✅ <b>Up to date!</b> No updates available.`;
+                }
+
+                bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' });
+            } catch (err) {
+                bot.sendMessage(msg.chat.id, `❌ Failed to check for updates: ${err.message}`, { parse_mode: 'HTML' });
+            }
+        });
+
+        // /git_pull command
+        bot.onText(/\/git_pull(?:\s+(.+))?/, async (msg, match) => {
+            if (!checkAccess(msg)) return;
+
+            const processName = match[1]?.trim();
+            if (!processName) {
+                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_pull <name|id>');
+                return;
+            }
+
+            try {
+                bot.sendMessage(msg.chat.id, `⏳ Pulling updates for <b>${processName}</b>...`, { parse_mode: 'HTML' });
+
+                const app = await describeApp(processName);
+                if (!app) {
+                    bot.sendMessage(msg.chat.id, `❌ Process <b>${processName}</b> not found.`, { parse_mode: 'HTML' });
+                    return;
+                }
+
+                const result = await pullUpdates(app.pm2_env_cwd);
+
+                if (result.success) {
+                    const newCommit = await getCurrentGitCommit(app.pm2_env_cwd);
+                    let message = `✅ <b>Updates Pulled Successfully!</b>\n\n`;
+                    message += `📦 App: <b>${app.name}</b>\n`;
+                    if (newCommit) message += `📝 New Commit: <code>${newCommit}</code>\n\n`;
+                    message += `⚠️ <b>Remember to reload the app:</b>\n`;
+                    message += `/reload_app ${processName}`;
+
+                    bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' });
+                } else {
+                    let message = `❌ <b>Failed to Pull Updates</b>\n\n`;
+                    message += `📦 App: <b>${app.name}</b>\n`;
+                    message += `⚠️ ${result.message}\n`;
+                    if (result.output) {
+                        message += `\n<pre>${result.output.substring(0, 500)}</pre>`;
+                    }
+
+                    bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' });
+                }
+            } catch (err) {
+                bot.sendMessage(msg.chat.id, `❌ Failed to pull updates for <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
             }
         });
 

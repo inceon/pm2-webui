@@ -647,6 +647,8 @@ TELEGRAM_ALLOWED_USER_IDS=123456789
 
 #### Available Commands
 
+**Process Management:**
+
 | Command | Description |
 |---------|-------------|
 | `/start` | Welcome message and command list |
@@ -657,6 +659,22 @@ TELEGRAM_ALLOWED_USER_IDS=123456789
 | `/restart_app <name\|id>` | Restart a process |
 | `/reload_app <name\|id>` | Gracefully reload a process (zero downtime) |
 
+**Git Management:**
+
+| Command | Description |
+|---------|-------------|
+| `/git_status <name\|id>` | Show git branch and current commit |
+| `/git_check <name\|id>` | Check for available updates from remote |
+| `/git_pull <name\|id>` | Pull updates from remote repository |
+
+**Examples:**
+```
+/git_status my-api
+/git_check my-api
+/git_pull my-api
+/reload_app my-api    (after pulling updates)
+```
+
 #### Alerts
 
 The bot automatically sends alerts to the first allowed user when:
@@ -665,11 +683,23 @@ The bot automatically sends alerts to the first allowed user when:
 - 🔄 A process is restarted
 - ✅ A process comes online
 
+#### Git Update Workflow via Telegram
+
+1. Check for updates: `/git_check my-api`
+2. If updates available, pull them: `/git_pull my-api`
+3. Reload the app to apply changes: `/reload_app my-api`
+
+The bot will show you:
+- Current and remote commit hashes
+- Number of commits behind
+- Success/failure messages with details
+
 #### Security
 
 - Only users listed in `TELEGRAM_ALLOWED_USER_IDS` can use the bot
 - Multiple user IDs can be comma-separated
 - Unauthorized users receive an "Access denied" message
+- Git operations use the server's configured credentials
 
 ---
 
@@ -755,6 +785,7 @@ For the git update feature to work, the application must:
 
 ### Example Workflow
 
+**Web UI:**
 ```bash
 # Scenario: You pushed new commits to your app's repository
 
@@ -765,6 +796,109 @@ For the git update feature to work, the application must:
 5. Success message: "Updates pulled successfully! New commit: abc1234"
 6. Click "Reload" or "Restart" button to apply changes
 ```
+
+**Telegram Bot:**
+```bash
+# Scenario: Manage updates from your phone
+
+1. Send: /git_check my-api
+2. Bot replies: "🆕 Updates Available! 2 commits behind"
+3. Send: /git_pull my-api
+4. Bot replies: "✅ Updates Pulled Successfully! New commit: abc1234"
+5. Send: /reload_app my-api
+6. Bot replies: "✅ Process reloaded successfully"
+```
+
+### Using Telegram Bot for Git Updates
+
+The Telegram bot provides full git management capabilities, perfect for remote administration.
+
+#### Show Git Information
+
+```
+/git_status my-api
+```
+
+Response:
+```
+🔀 Git Status for my-api
+
+📌 Branch: main
+📝 Commit: 0a755e3
+
+💡 Use /git_check my-api to check for updates
+```
+
+#### Check for Updates
+
+```
+/git_check my-api
+```
+
+Response if updates available:
+```
+🔀 Update Status for my-api
+
+📝 Current: 0a755e3
+📡 Remote: f3d92a1
+
+🆕 Updates Available!
+📊 2 commits behind
+
+💡 Use /git_pull my-api to pull updates
+```
+
+Response if up-to-date:
+```
+🔀 Update Status for my-api
+
+📝 Current: f3d92a1
+📡 Remote: f3d92a1
+
+✅ Up to date! No updates available.
+```
+
+#### Pull Updates
+
+```
+/git_pull my-api
+```
+
+Success response:
+```
+✅ Updates Pulled Successfully!
+
+📦 App: my-api
+📝 New Commit: f3d92a1
+
+⚠️ Remember to reload the app:
+/reload_app my-api
+```
+
+Error response:
+```
+❌ Failed to Pull Updates
+
+📦 App: my-api
+⚠️ Failed to pull updates
+
+error: Your local changes to the following files would be overwritten by merge:
+...
+```
+
+#### Complete Update Flow
+
+1. **Check status**: `/git_check my-api`
+2. **Pull updates**: `/git_pull my-api` (if available)
+3. **Apply changes**: `/reload_app my-api` (for zero downtime) or `/restart_app my-api`
+
+#### Advantages of Telegram Bot
+
+- ✅ Update apps from anywhere (phone, desktop)
+- ✅ No need to access web interface
+- ✅ Quick status checks
+- ✅ Immediate feedback with detailed messages
+- ✅ Same security as web interface (user allowlist)
 
 ### API Endpoints
 

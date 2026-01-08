@@ -14,6 +14,10 @@
   - Displays new commit hash after successful pull
   - Shows git output for troubleshooting
 - **Manual refresh** - Check for updates on demand
+- **Telegram bot integration** - Manage git updates via Telegram
+  - `/git_status <name|id>` - Show git branch and commit
+  - `/git_check <name|id>` - Check for available updates
+  - `/git_pull <name|id>` - Pull updates from remote
 
 #### API Endpoints Added
 - `GET /api/apps/:appName/git/check-updates` - Check for available updates
@@ -30,6 +34,11 @@
 - "Check for Updates" / "Refresh" button
 - Real-time update notifications
 
+#### Telegram Bot Commands Added
+- `/git_status <name|id>` - Display git branch and commit information
+- `/git_check <name|id>` - Check for available updates with commit comparison
+- `/git_pull <name|id>` - Pull updates and show new commit hash
+
 ---
 
 ### Telegram Bot Integration
@@ -41,6 +50,9 @@
   - `/stop_app <name|id>` - Stop a running process
   - `/restart_app <name|id>` - Restart a process
   - `/reload_app <name|id>` - Gracefully reload a process
+  - `/git_status <name|id>` - Show git branch and commit
+  - `/git_check <name|id>` - Check for available updates
+  - `/git_pull <name|id>` - Pull updates from remote
 - **Real-time crash alerts** - Automatic notifications on process events
   - Crash detection (non-zero exit codes)
   - Stop/restart/online notifications

@@ -96,7 +96,8 @@ See all PM2 processes with:
 - Admin-only access for pulling updates
 
 ### Telegram Bot (Optional)
-- Control apps from Telegram (`/status`, `/restart_app`, `/stop_app`)
+- Control apps from Telegram (`/status`, `/restart_app`, `/stop_app`, `/reload_app`)
+- Manage git updates (`/git_status`, `/git_check`, `/git_pull`)
 - Receive crash alerts automatically
 - Restrict access to specific user IDs
 
