@@ -93,6 +93,11 @@ See all PM2 processes with:
 - Current branch
 - Latest commit hash
 
+### Telegram Bot (Optional)
+- Control apps from Telegram (`/status`, `/restart_app`, `/stop_app`)
+- Receive crash alerts automatically
+- Restrict access to specific user IDs
+
 ## Configuration
 
 Edit `.env` file:
@@ -108,6 +113,11 @@ PORT=4343
 HTTPS_ENABLED=false
 HTTPS_KEY_PATH=/path/to/key.pem
 HTTPS_CERT_PATH=/path/to/cert.pem
+
+# Telegram Bot (optional)
+TELEGRAM_ENABLED=false
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_ALLOWED_USER_IDS=123456789
 ```
 
 ## Security

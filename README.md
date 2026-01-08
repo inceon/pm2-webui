@@ -6,6 +6,7 @@ Opensource Alternative to PM2 Plus
 - App Management :white_check_mark:
 - Log Viewer :white_check_mark:
 - Responsive UI :white_check_mark:
+- Telegram Bot Integration :white_check_mark:
 - Manual and Auto(Github webhooks) Deployment
 - Environment Management
 
@@ -39,6 +40,7 @@ npm run start:dev
 - [x] add comprehensive error handling
 - [x] add HTTPS support
 - [x] migrate to ES Modules (ESM)
+- [x] add Telegram bot integration (status, control, crash alerts)
 
 #### TODO
 - [ ] support for relative paths
@@ -59,4 +61,4 @@ npm run start:dev
 ![PM2 Webui App](/screenshots/app.png?raw=true "PM2 WebUI App")
 
 ##### LICENSE
-MIT - Copyright (c) 2022 Surya T
+MIT - Copyright (c) 2026 Inceon

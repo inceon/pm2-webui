@@ -409,6 +409,11 @@ APP_SESSION_SECRET=<auto_generated>
 # Features
 SHOW_GIT_INFO=false     # Show git branch/commit info
 SHOW_ENV_FILE=false     # Show environment variables
+
+# Telegram Bot (Optional)
+TELEGRAM_ENABLED=false
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_ALLOWED_USER_IDS=123456789,987654321
 ```
 
 ---
@@ -622,6 +627,51 @@ sudo chown -R nodejs:nodejs /opt/pm2-webui
 ---
 
 ## Advanced Features
+
+### Telegram Bot Integration
+
+Control PM2 processes and receive crash alerts via Telegram.
+
+#### Setup
+
+1. **Create a bot** via [@BotFather](https://t.me/BotFather) on Telegram
+2. **Get your user ID** via [@userinfobot](https://t.me/userinfobot)
+3. **Configure `.env`**:
+```bash
+TELEGRAM_ENABLED=true
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_ALLOWED_USER_IDS=123456789
+```
+
+4. **Restart PM2 WebUI** - the bot will start automatically
+
+#### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome message and command list |
+| `/help` | Show all available commands |
+| `/status` | List all PM2 processes with status, CPU, memory, uptime |
+| `/start_app <name\|id>` | Start a stopped process |
+| `/stop_app <name\|id>` | Stop a running process |
+| `/restart_app <name\|id>` | Restart a process |
+| `/reload_app <name\|id>` | Gracefully reload a process (zero downtime) |
+
+#### Alerts
+
+The bot automatically sends alerts to the first allowed user when:
+- 🚨 A process crashes (non-zero exit code)
+- 🛑 A process is stopped
+- 🔄 A process is restarted
+- ✅ A process comes online
+
+#### Security
+
+- Only users listed in `TELEGRAM_ALLOWED_USER_IDS` can use the bot
+- Multiple user IDs can be comma-separated
+- Unauthorized users receive an "Access denied" message
+
+---
 
 ### Viewing Real-time Logs
 

@@ -1,5 +1,36 @@
 # Changelog
 
+## [Unreleased] - 2025-01-08
+
+### Telegram Bot Integration
+
+#### Features
+- **Telegram bot for PM2 control** - Manage PM2 processes directly from Telegram
+  - `/status` - List all processes with status, CPU, memory, uptime
+  - `/start_app <name|id>` - Start a stopped process
+  - `/stop_app <name|id>` - Stop a running process
+  - `/restart_app <name|id>` - Restart a process
+  - `/reload_app <name|id>` - Gracefully reload a process
+- **Real-time crash alerts** - Automatic notifications on process events
+  - Crash detection (non-zero exit codes)
+  - Stop/restart/online notifications
+  - Alerts sent to first allowed user
+- **User allowlist** - Restrict bot access to specific Telegram user IDs
+
+#### Files Added
+- `src/services/telegram.service.js` - Telegram bot implementation
+
+#### Configuration Changes
+- Added to env.example:
+  - `TELEGRAM_ENABLED` - Enable/disable Telegram bot
+  - `TELEGRAM_BOT_TOKEN` - Bot token from @BotFather
+  - `TELEGRAM_ALLOWED_USER_IDS` - Comma-separated allowed user IDs
+
+#### Dependencies Added
+- `node-telegram-bot-api` - Telegram Bot API client
+
+---
+
 ## [Unreleased] - 2025-10-02
 
 ### High Priority Security & Stability Improvements
