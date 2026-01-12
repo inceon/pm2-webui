@@ -70,6 +70,66 @@ function formatAppsList(apps) {
 }
 
 /**
+ * Create inline keyboard with app list
+ */
+function createAppSelectionKeyboard(apps, commandPrefix) {
+    const keyboard = [];
+
+    // Create buttons in rows of 2
+    for (let i = 0; i < apps.length; i += 2) {
+        const row = [];
+        row.push({
+            text: `${apps[i].name} (${apps[i].status})`,
+            callback_data: `${commandPrefix}:${apps[i].name}`
+        });
+
+        if (i + 1 < apps.length) {
+            row.push({
+                text: `${apps[i + 1].name} (${apps[i + 1].status})`,
+                callback_data: `${commandPrefix}:${apps[i + 1].name}`
+            });
+        }
+
+        keyboard.push(row);
+    }
+
+    return { inline_keyboard: keyboard };
+}
+
+/**
+ * Show app selection keyboard
+ */
+async function showAppSelection(chatId, commandPrefix, message) {
+    try {
+        const apps = await listApps();
+        if (apps.length === 0) {
+            bot.sendMessage(chatId, '📭 No PM2 processes found.');
+            return;
+        }
+        const keyboard = createAppSelectionKeyboard(apps, commandPrefix);
+        bot.sendMessage(chatId, message, { reply_markup: keyboard });
+    } catch (err) {
+        bot.sendMessage(chatId, `⚠️ Failed to load apps. Usage: /${commandPrefix} <name|id>`);
+    }
+}
+
+/**
+ * Execute command with app name or show selection
+ */
+async function executeOrShowSelection(msg, processName, commandPrefix, selectionMessage, action) {
+    if (!processName) {
+        await showAppSelection(msg.chat.id, commandPrefix, selectionMessage);
+        return;
+    }
+
+    try {
+        await action(processName);
+    } catch (err) {
+        bot.sendMessage(msg.chat.id, `❌ Failed: ${err.message}`, { parse_mode: 'HTML' });
+    }
+}
+
+/**
  * Start PM2 process by name or ID
  */
 function startApp(process) {
@@ -90,6 +150,109 @@ function startApp(process) {
             });
         });
     });
+}
+
+/**
+ * Handle callback query actions
+ */
+async function handleCallbackAction(command, appName) {
+    switch (command) {
+        case 'start_app':
+            await startApp(appName);
+            return { success: true, message: `✅ Process <b>${appName}</b> started successfully.` };
+
+        case 'stop_app':
+            await stopApp(appName);
+            return { success: true, message: `✅ Process <b>${appName}</b> stopped successfully.` };
+
+        case 'restart_app':
+            await restartApp(appName);
+            return { success: true, message: `✅ Process <b>${appName}</b> restarted successfully.` };
+
+        case 'reload_app':
+            await reloadApp(appName);
+            return { success: true, message: `✅ Process <b>${appName}</b> reloaded successfully.` };
+
+        case 'git_status': {
+            const app = await describeApp(appName);
+            if (!app) {
+                return { success: false, message: `❌ Process <b>${appName}</b> not found.` };
+            }
+
+            const branch = await getCurrentGitBranch(app.pm2_env_cwd);
+            const commit = await getCurrentGitCommit(app.pm2_env_cwd);
+
+            if (!branch && !commit) {
+                return { success: false, message: `ℹ️ <b>${app.name}</b> is not in a git repository.` };
+            }
+
+            let message = `🔀 <b>Git Status for ${app.name}</b>\n\n`;
+            if (branch) message += `📌 Branch: <code>${branch}</code>\n`;
+            if (commit) message += `📝 Commit: <code>${commit}</code>\n`;
+            message += `\n💡 Use /git_check ${appName} to check for updates`;
+
+            return { success: true, message };
+        }
+
+        case 'git_check': {
+            const app = await describeApp(appName);
+            if (!app) {
+                return { success: false, message: `❌ Process <b>${appName}</b> not found.` };
+            }
+
+            const updateStatus = await checkForUpdates(app.pm2_env_cwd);
+
+            if (!updateStatus.currentCommit || !updateStatus.remoteCommit) {
+                return { success: false, message: `ℹ️ ${updateStatus.message || 'Unable to check for updates'}` };
+            }
+
+            let message = `🔀 <b>Update Status for ${app.name}</b>\n\n`;
+            message += `📝 Current: <code>${updateStatus.currentCommit}</code>\n`;
+            message += `📡 Remote: <code>${updateStatus.remoteCommit}</code>\n\n`;
+
+            if (updateStatus.hasUpdates) {
+                message += `🆕 <b>Updates Available!</b>\n`;
+                message += `📊 ${updateStatus.message}\n\n`;
+                message += `💡 Use /git_pull ${appName} to pull updates`;
+            } else {
+                message += `✅ <b>Up to date!</b> No updates available.`;
+            }
+
+            return { success: true, message };
+        }
+
+        case 'git_pull': {
+            const app = await describeApp(appName);
+            if (!app) {
+                return { success: false, message: `❌ Process <b>${appName}</b> not found.` };
+            }
+
+            const result = await pullUpdates(app.pm2_env_cwd);
+
+            if (result.success) {
+                const newCommit = await getCurrentGitCommit(app.pm2_env_cwd);
+                let message = `✅ <b>Updates Pulled Successfully!</b>\n\n`;
+                message += `📦 App: <b>${app.name}</b>\n`;
+                if (newCommit) message += `📝 New Commit: <code>${newCommit}</code>\n\n`;
+                message += `⚠️ <b>Remember to reload the app:</b>\n`;
+                message += `/reload_app ${appName}`;
+
+                return { success: true, message };
+            } else {
+                let message = `❌ <b>Failed to Pull Updates</b>\n\n`;
+                message += `📦 App: <b>${app.name}</b>\n`;
+                message += `⚠️ ${result.message}\n`;
+                if (result.output) {
+                    message += `\n<pre>${result.output.substring(0, 500)}</pre>`;
+                }
+
+                return { success: false, message };
+            }
+        }
+
+        default:
+            return { success: false, message: '❌ Unknown command' };
+    }
 }
 
 /**
@@ -269,82 +432,78 @@ function startTelegramBot() {
         // /start_app command
         bot.onText(/\/start_app(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
-            if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /start_app <name|id>');
-                return;
-            }
 
-            try {
-                await startApp(processName);
-                bot.sendMessage(msg.chat.id, `✅ Process <b>${processName}</b> started successfully.`, { parse_mode: 'HTML' });
-            } catch (err) {
-                bot.sendMessage(msg.chat.id, `❌ Failed to start <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
-            }
+            await executeOrShowSelection(
+                msg,
+                processName,
+                'start_app',
+                '🚀 Select an app to start:',
+                async (name) => {
+                    await startApp(name);
+                    bot.sendMessage(msg.chat.id, `✅ Process <b>${name}</b> started successfully.`, { parse_mode: 'HTML' });
+                }
+            );
         });
 
         // /stop_app command
         bot.onText(/\/stop_app(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
-            if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /stop_app <name|id>');
-                return;
-            }
 
-            try {
-                await stopApp(processName);
-                bot.sendMessage(msg.chat.id, `✅ Process <b>${processName}</b> stopped successfully.`, { parse_mode: 'HTML' });
-            } catch (err) {
-                bot.sendMessage(msg.chat.id, `❌ Failed to stop <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
-            }
+            await executeOrShowSelection(
+                msg,
+                processName,
+                'stop_app',
+                '🛑 Select an app to stop:',
+                async (name) => {
+                    await stopApp(name);
+                    bot.sendMessage(msg.chat.id, `✅ Process <b>${name}</b> stopped successfully.`, { parse_mode: 'HTML' });
+                }
+            );
         });
 
         // /restart_app command
         bot.onText(/\/restart_app(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
-            if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /restart_app <name|id>');
-                return;
-            }
 
-            try {
-                await restartApp(processName);
-                bot.sendMessage(msg.chat.id, `✅ Process <b>${processName}</b> restarted successfully.`, { parse_mode: 'HTML' });
-            } catch (err) {
-                bot.sendMessage(msg.chat.id, `❌ Failed to restart <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
-            }
+            await executeOrShowSelection(
+                msg,
+                processName,
+                'restart_app',
+                '🔄 Select an app to restart:',
+                async (name) => {
+                    await restartApp(name);
+                    bot.sendMessage(msg.chat.id, `✅ Process <b>${name}</b> restarted successfully.`, { parse_mode: 'HTML' });
+                }
+            );
         });
 
         // /reload_app command
         bot.onText(/\/reload_app(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
-            if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /reload_app <name|id>');
-                return;
-            }
 
-            try {
-                await reloadApp(processName);
-                bot.sendMessage(msg.chat.id, `✅ Process <b>${processName}</b> reloaded successfully.`, { parse_mode: 'HTML' });
-            } catch (err) {
-                bot.sendMessage(msg.chat.id, `❌ Failed to reload <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
-            }
+            await executeOrShowSelection(
+                msg,
+                processName,
+                'reload_app',
+                '🔃 Select an app to reload:',
+                async (name) => {
+                    await reloadApp(name);
+                    bot.sendMessage(msg.chat.id, `✅ Process <b>${name}</b> reloaded successfully.`, { parse_mode: 'HTML' });
+                }
+            );
         });
 
         // /git_status command
         bot.onText(/\/git_status(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
+
             if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_status <name|id>');
+                await showAppSelection(msg.chat.id, 'git_status', '🔀 Select an app to view git status:');
                 return;
             }
 
@@ -377,10 +536,10 @@ function startTelegramBot() {
         // /git_check command
         bot.onText(/\/git_check(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
+
             if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_check <name|id>');
+                await showAppSelection(msg.chat.id, 'git_check', '🔍 Select an app to check for updates:');
                 return;
             }
 
@@ -421,10 +580,10 @@ function startTelegramBot() {
         // /git_pull command
         bot.onText(/\/git_pull(?:\s+(.+))?/, async (msg, match) => {
             if (!checkAccess(msg)) return;
-
             const processName = match[1]?.trim();
+
             if (!processName) {
-                bot.sendMessage(msg.chat.id, '⚠️ Please provide a process name or ID.\nUsage: /git_pull <name|id>');
+                await showAppSelection(msg.chat.id, 'git_pull', '⬇️ Select an app to pull updates:');
                 return;
             }
 
@@ -460,6 +619,55 @@ function startTelegramBot() {
                 }
             } catch (err) {
                 bot.sendMessage(msg.chat.id, `❌ Failed to pull updates for <b>${processName}</b>: ${err.message}`, { parse_mode: 'HTML' });
+            }
+        });
+
+        // Handle callback queries (inline keyboard buttons)
+        bot.on('callback_query', async (callbackQuery) => {
+            const msg = callbackQuery.message;
+            const data = callbackQuery.data;
+            const userId = callbackQuery.from.id;
+
+            // Check access
+            if (!isAllowedUser(userId)) {
+                bot.answerCallbackQuery(callbackQuery.id, { text: '⛔ Access denied' });
+                return;
+            }
+
+            // Parse callback data: "command:appName"
+            const [command, appName] = data.split(':');
+
+            try {
+                // Show processing indicator
+                const processingMessages = {
+                    start_app: `Starting ${appName}...`,
+                    stop_app: `Stopping ${appName}...`,
+                    restart_app: `Restarting ${appName}...`,
+                    reload_app: `Reloading ${appName}...`,
+                    git_status: 'Fetching git status...',
+                    git_check: 'Checking for updates...',
+                    git_pull: 'Pulling updates...'
+                };
+
+                bot.answerCallbackQuery(callbackQuery.id, {
+                    text: processingMessages[command] || 'Processing...'
+                });
+
+                // Execute the action
+                const result = await handleCallbackAction(command, appName);
+
+                // Update message with result
+                bot.editMessageText(result.message, {
+                    chat_id: msg.chat.id,
+                    message_id: msg.message_id,
+                    parse_mode: 'HTML'
+                });
+            } catch (err) {
+                bot.answerCallbackQuery(callbackQuery.id, { text: `❌ Error: ${err.message}` });
+                bot.editMessageText(`❌ Failed: ${err.message}`, {
+                    chat_id: msg.chat.id,
+                    message_id: msg.message_id
+                });
             }
         });
 
