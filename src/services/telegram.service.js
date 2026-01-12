@@ -177,6 +177,24 @@ function startTelegramBot() {
         bot = new TelegramBot(config.TELEGRAM_BOT_TOKEN, { polling: true });
         console.log('[Telegram] Bot started successfully');
 
+        // Set up command menu
+        bot.setMyCommands([
+            { command: 'start', description: 'Welcome message and command list' },
+            { command: 'help', description: 'Show all available commands' },
+            { command: 'status', description: 'List all PM2 processes' },
+            { command: 'start_app', description: 'Start a process (usage: /start_app <name>)' },
+            { command: 'stop_app', description: 'Stop a process (usage: /stop_app <name>)' },
+            { command: 'restart_app', description: 'Restart a process (usage: /restart_app <name>)' },
+            { command: 'reload_app', description: 'Reload a process (usage: /reload_app <name>)' },
+            { command: 'git_status', description: 'Show git branch and commit (usage: /git_status <name>)' },
+            { command: 'git_check', description: 'Check for git updates (usage: /git_check <name>)' },
+            { command: 'git_pull', description: 'Pull git updates (usage: /git_pull <name>)' }
+        ]).then(() => {
+            console.log('[Telegram] Command menu registered successfully');
+        }).catch((err) => {
+            console.error('[Telegram] Failed to set command menu:', err.message);
+        });
+
         // Middleware: Check if user is allowed
         const checkAccess = (msg) => {
             const userId = msg.from.id;
