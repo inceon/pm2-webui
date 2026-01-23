@@ -112,5 +112,22 @@ function restartApp(process){
     })
 }
 
-export { listApps, describeApp, reloadApp, stopApp, restartApp };
+function flushLogs(process){
+    return new Promise((resolve, reject) => {
+        pm2.connect((err) => {
+            if (err) {
+                reject(err)
+            }
+            pm2.flush(process, (err, proc) => {
+                pm2.disconnect()
+                if (err) {
+                    reject(err)
+                }
+                resolve(proc)
+            })
+        })
+    })
+}
+
+export { listApps, describeApp, reloadApp, stopApp, restartApp, flushLogs };
 

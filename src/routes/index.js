@@ -1,7 +1,7 @@
 import config from '../config/index.js';
 import { RateLimit } from 'koa2-ratelimit';
 import Router from '@koa/router';
-import { listApps, describeApp, reloadApp, restartApp, stopApp } from '../providers/pm2/api.js';
+import { listApps, describeApp, reloadApp, restartApp, stopApp, flushLogs } from '../providers/pm2/api.js';
 import { validateAdminUser } from '../services/admin.service.js';
 import { readLogsReverse } from '../utils/read-logs.util.js';
 import { getCurrentGitBranch, getCurrentGitCommit, checkForUpdates, pullUpdates } from '../utils/git.util.js';
@@ -350,6 +350,29 @@ router.post('/api/apps/:appName/git/pull', isAuthenticated, requireRole('admin')
         }
     } catch (err) {
         console.error('Failed to pull updates:', err);
+        ctx.body = { success: false, message: err.message };
+    }
+});
+
+router.post('/api/apps/:appName/logs/clear', isAuthenticated, requireRole('admin'), async (ctx) => {
+    try {
+        const { appName } = ctx.params;
+
+        if (!appName) {
+            ctx.throw(400, 'App name is required');
+        }
+
+        const app = await describeApp(appName);
+
+        if (!app) {
+            ctx.throw(404, 'App not found');
+        }
+
+        await flushLogs(appName);
+
+        ctx.body = { success: true, message: 'Logs cleared successfully' };
+    } catch (err) {
+        console.error('Failed to clear logs:', err);
         ctx.body = { success: false, message: err.message };
     }
 });
