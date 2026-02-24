@@ -5,6 +5,7 @@ Opensource Alternative to PM2 Plus
 - Secure Login :white_check_mark:
 - App Management :white_check_mark:
 - Log Viewer :white_check_mark:
+- Multi-VM Control (Hub + Agent) :white_check_mark:
 - Responsive UI :white_check_mark:
 - Telegram Bot Integration (with Git commands) :white_check_mark:
 - Git Update Detection & Pull :white_check_mark:
@@ -12,19 +13,39 @@ Opensource Alternative to PM2 Plus
 - Environment Management
 
 ##### QUICK START
+### Hub (VM1 - central dashboard)
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env
+echo "APP_MODE=hub" >> .env
 npm run setup-admin-user  # Required for login
 npm start
 ```
 
-**Access**: `http://localhost:4343`
+### Agent (VM2/VM3 - controlled nodes)
+```bash
+git clone https://github.com/inceon/pm2-webui
+cd pm2-webui
+npm install
+cp env.example .env
+echo "APP_MODE=agent" >> .env
+echo "LOCAL_SERVER_NAME=vm2" >> .env
+echo "AGENT_API_TOKEN=<long-random-token>" >> .env
+npm start
+```
+
+**Hub Access**: `http://VM1:4343`  
+Then add VM2/VM3 from dashboard using their base URL and token.
+
+Security notes:
+- Agent token must be at least 24 characters.
+- Remote agent base URL host is restricted to `localhost` or private IPv4.
 
 📚 **Documentation**:
 - 🚀 [Quick Start for Multiple VMs](QUICK_START.md) - Start here!
+- 🧭 [Hub + Agent Detailed Setup](HUB_AGENT_SETUP.md) - Full 3-VM walkthrough
 - 📖 [Complete Setup Guide](SETUP_GUIDE.md) - Advanced configurations
 
 ##### FOR DEVELOPMENT USE

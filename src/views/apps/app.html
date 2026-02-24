@@ -17,10 +17,12 @@
               </strong>
               <% if(app.status === "online"){ %>
                 <span class="badge bg-green-lt"><%= app.status %></span>
-                </a>
               <% } else{ %>  
                 <span class="badge bg-red-lt"><%= app.status %></span>
               <% } %>
+            </div>
+            <div class="mb-2">
+              <span class="badge bg-azure-lt">Server: <%= server.name %></span>
             </div>
             <h4 class="text-secondary">
               <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-server" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -137,7 +139,7 @@
                 </div>
               </div>
               <% } %>
-              <% if(app.env_file){ %>
+              <% if(canManageEnv){ %>
               <h4 class="text-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-text" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -156,7 +158,7 @@
           </div>
           <div class="card-footer text-center">
             <% if(app.status === "online"){ %>
-              <button class="btn btn-sm btn-green" aria-label="Button" onclick="pm2AppAction('<%= app.name %>', 'reload')">
+              <button class="btn btn-sm btn-green" aria-label="Button" onclick='pm2AppAction(<%- JSON.stringify(server.id) %>, <%- JSON.stringify(app.name) %>, "reload")'>
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                   <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
@@ -164,7 +166,7 @@
                 </svg>
                 Reload
               </button>
-              <button class="btn btn-sm btn-cyan" aria-label="Button" onclick="pm2AppAction('<%= app.name %>', 'restart')">
+              <button class="btn btn-sm btn-cyan" aria-label="Button" onclick='pm2AppAction(<%- JSON.stringify(server.id) %>, <%- JSON.stringify(app.name) %>, "restart")'>
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-rotate-clockwise-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                   <path d="M9 4.55a8 8 0 0 1 6 14.9m0 -4.45v5h5"></path>
@@ -176,7 +178,7 @@
                 </svg>
                 Restart
               </button>
-              <button class="btn btn-sm btn-danger" aria-label="Button" onclick="pm2AppAction('<%= app.name %>', 'stop')">
+              <button class="btn btn-sm btn-danger" aria-label="Button" onclick='pm2AppAction(<%- JSON.stringify(server.id) %>, <%- JSON.stringify(app.name) %>, "stop")'>
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-minus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                   <circle cx="12" cy="12" r="9"></circle>
@@ -185,7 +187,7 @@
                 Stop
               </button>
             <% } else{ %> 
-              <button class="btn btn-sm btn-cyan" aria-label="Button" onclick="pm2AppAction('<%= app.name %>', 'restart')">
+              <button class="btn btn-sm btn-cyan" aria-label="Button" onclick='pm2AppAction(<%- JSON.stringify(server.id) %>, <%- JSON.stringify(app.name) %>, "restart")'>
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-rotate-clockwise-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                   <path d="M9 4.55a8 8 0 0 1 6 14.9m0 -4.45v5h5"></path>
@@ -221,6 +223,7 @@
                 STDERR</a>
             </li>
             <li class="nav-item ms-auto">
+              <% if (supportsRealtime) { %>
               <button id="realtime-toggle" class="btn btn-sm btn-outline-primary" onclick="toggleRealtime()" title="Enable/Disable Realtime Logs">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-live-photo" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -233,6 +236,7 @@
                 </svg>
                 <span id="realtime-status">OFF</span>
               </button>
+              <% } %>
               <button class="btn btn-icon shadow-none" style="border:none !important;" onclick="nextLogs()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrow-big-top" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -273,6 +277,7 @@
   </div>
 </div>
 
+<% if(canManageEnv){ %>
 <div class="modal fade" id="modal-scrollable" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
     <div class="modal-content">
@@ -295,9 +300,12 @@
     </div>
   </div>
 </div>
+<% } %>
 
 <script src="/assets/js/prism.js"></script>
 <script>
+  const apiBasePath = '<%= apiBasePath %>';
+  const supportsRealtime = <%= supportsRealtime ? 'true' : 'false' %>;
 
   async function saveEnvFile() {
     const envContent = document.getElementById('env-editor').value;
@@ -306,7 +314,7 @@
     try {
       statusDiv.innerHTML = '<div class="alert alert-info">Saving...</div>';
 
-      const response = await fetch(`/api/apps/<%= app.name %>/env`, {
+      const response = await fetch(`/api/apps/<%= encodeURIComponent(app.name) %>/env`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -340,7 +348,7 @@
   
 
   async function fetchLogs(log_type, next_key){
-    const response = await fetch(`/api/apps/<%= app.name %>/logs/${log_type}${next_key?`?nextKey=${next_key}`: ''}`)
+    const response = await fetch(`${apiBasePath}/logs/${log_type}${next_key?`?nextKey=${next_key}`: ''}`)
     const data = await response.json()
     if(data && data.logs){
       return data.logs
@@ -393,6 +401,10 @@
   let realtimeEnabled = false;
 
   function toggleRealtime() {
+    if (!supportsRealtime) {
+      return;
+    }
+
     realtimeEnabled = !realtimeEnabled;
     const toggleBtn = document.getElementById('realtime-toggle');
     const statusSpan = document.getElementById('realtime-status');
@@ -411,6 +423,10 @@
   }
 
   function startRealtimeLogs() {
+    if (!supportsRealtime) {
+      return;
+    }
+
     const logTypes = ['stdout', 'stderr'];
 
     logTypes.forEach(logType => {
@@ -418,7 +434,7 @@
         eventSources[logType].close();
       }
 
-      const eventSource = new EventSource(`/api/apps/<%= app.name %>/logs/${logType}/stream`);
+      const eventSource = new EventSource(`/api/apps/<%= encodeURIComponent(app.name) %>/logs/${logType}/stream`);
 
       eventSource.onmessage = (event) => {
         try {
@@ -466,7 +482,7 @@
   // Git update functions
   async function checkForUpdates() {
     try {
-      const response = await fetch(`/api/apps/<%= app.name %>/git/check-updates`);
+      const response = await fetch(`/api/apps/<%= encodeURIComponent(app.name) %>/git/check-updates`);
       const data = await response.json();
 
       if (data.success && data.updateStatus) {
@@ -486,7 +502,7 @@
     }
 
     try {
-      const response = await fetch(`/api/apps/<%= app.name %>/git/pull`, {
+      const response = await fetch(`/api/apps/<%= encodeURIComponent(app.name) %>/git/pull`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -513,7 +529,7 @@
     }
 
     try {
-      const response = await fetch(`/api/apps/<%= app.name %>/logs/clear`, {
+      const response = await fetch(`${apiBasePath}/logs/clear`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

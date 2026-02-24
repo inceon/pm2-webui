@@ -6,10 +6,21 @@ const errorHandler = async (ctx, next) => {
     try {
         await next();
     } catch (err) {
+        const requestId = ctx.state?.requestId || null;
+        const errorCode = err.code || err.cause?.code || null;
+
         // Log error details
         console.error('Error occurred:', {
+            requestId,
             message: err.message,
             stack: err.stack,
+            cause: err.cause
+                ? {
+                    name: err.cause.name,
+                    message: err.cause.message,
+                    code: err.cause.code
+                }
+                : null,
             path: ctx.path,
             method: ctx.method,
             ip: ctx.ip,
@@ -20,14 +31,21 @@ const errorHandler = async (ctx, next) => {
         ctx.status = err.status || err.statusCode || 500;
 
         // Determine if this is an API request
-        const isApiRequest = ctx.path.startsWith('/api/');
+        const isApiRequest = ctx.path.startsWith('/api/') || ctx.path.startsWith('/agent/');
+        const isAuthenticatedUser = Boolean(ctx.session?.isAuthenticated);
+        const shouldExposeMessage = err.expose === true || ctx.status < 500 || isAuthenticatedUser;
+        const message = shouldExposeMessage
+            ? (err.message || 'Unknown error')
+            : 'Internal server error';
 
         if (isApiRequest) {
             // API error response
             ctx.body = {
                 error: {
-                    message: ctx.status === 500 ? 'Internal server error' : err.message,
-                    status: ctx.status
+                    message,
+                    status: ctx.status,
+                    requestId,
+                    code: errorCode
                 }
             };
         } else {
@@ -41,7 +59,8 @@ const errorHandler = async (ctx, next) => {
                         <head><title>Error ${ctx.status}</title></head>
                         <body>
                             <h1>Error ${ctx.status}</h1>
-                            <p>${ctx.status === 500 ? 'Internal server error' : err.message}</p>
+                            <p>${message}</p>
+                            ${requestId ? `<p>Request ID: <code>${requestId}</code></p>` : ''}
                             <a href="/apps">Go to Dashboard</a>
                         </body>
                     </html>
