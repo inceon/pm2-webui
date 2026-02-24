@@ -54,7 +54,7 @@ For quickest setup, use [QUICK_START.md](QUICK_START.md).
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 
 # 2. Install dependencies
@@ -110,7 +110,7 @@ ssh user@192.168.1.10
 cd /opt  # or /home/user or wherever you prefer
 
 # Clone repository
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 
 # Install dependencies
@@ -167,7 +167,7 @@ ssh user@192.168.1.20
 
 # Repeat EXACT same steps as VM1
 cd /opt
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env
@@ -939,8 +939,8 @@ sudo systemctl restart pm2-webui  # If using systemd
 
 ## Support & Contributing
 
-- **Issues**: https://github.com/mamamou/pm2-webui/issues
-- **Docs**: https://github.com/mamamou/pm2-webui
+- **Issues**: https://github.com/inceon/pm2-webui/issues
+- **Docs**: https://github.com/inceon/pm2-webui
 - **License**: MIT
 
 ---

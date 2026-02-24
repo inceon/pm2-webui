@@ -37,7 +37,7 @@ pm2 list
 ## Step 1: Configure VM1 as Hub
 
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env
@@ -69,7 +69,7 @@ Open: `http://VM1_IP:4343`
 ## Step 2: Configure VM2 as Agent
 
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env

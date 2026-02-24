@@ -15,7 +15,7 @@ Opensource Alternative to PM2 Plus
 ##### QUICK START
 ### Hub (VM1 - central dashboard)
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env
@@ -26,7 +26,7 @@ npm start
 
 ### Agent (VM2/VM3 - controlled nodes)
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env

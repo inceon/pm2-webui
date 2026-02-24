@@ -5,7 +5,7 @@ This setup gives you one dashboard on VM1 that controls PM2 on VM1, VM2 and VM3.
 ## 1) VM1 as Hub (web dashboard)
 
 ```bash
-git clone https://github.com/mamamou/pm2-webui
+git clone https://github.com/inceon/pm2-webui
 cd pm2-webui
 npm install
 cp env.example .env
