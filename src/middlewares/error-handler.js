@@ -20,7 +20,7 @@ const errorHandler = async (ctx, next) => {
         ctx.status = err.status || err.statusCode || 500;
 
         // Determine if this is an API request
-        const isApiRequest = ctx.path.startsWith('/api/');
+        const isApiRequest = ctx.path.startsWith('/api/') || ctx.path.startsWith('/agent/');
 
         if (isApiRequest) {
             // API error response

@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 
 // Init Application
 
-if(!config.APP_USERNAME || !config.APP_PASSWORD){
+if(config.APP_MODE === 'hub' && (!config.APP_USERNAME || !config.APP_PASSWORD)){
     console.log("You must first setup admin user. Run command -> npm run setup-admin-user")
     process.exit(2)
 }
@@ -56,12 +56,24 @@ app.use(session(sessionConfig, app));
 app.use(koaBody());
 
 // CSRF protection for state-changing operations
-app.use(new CSRF({
+const csrfMiddleware = new CSRF({
     invalidTokenMessage: 'Invalid CSRF token',
     invalidTokenStatusCode: 403,
     excludedMethods: ['GET', 'HEAD', 'OPTIONS'],
     disableQuery: false
-}));
+});
+
+app.use(async (ctx, next) => {
+    if (ctx.path.startsWith('/agent/')) {
+        return await next();
+    }
+    return csrfMiddleware(ctx, next);
+});
+
+app.use(async (ctx, next) => {
+    ctx.state.currentUser = ctx.session?.user || null;
+    await next();
+});
 
 app.use(serve(path.join(__dirname, 'public')));
 
@@ -104,5 +116,7 @@ if (config.HTTPS_ENABLED) {
     });
 }
 
-// Start Telegram bot (if configured)
-startTelegramBot();
+// Start Telegram bot only in hub mode (if configured)
+if (config.APP_MODE === 'hub') {
+    startTelegramBot();
+}

@@ -1,49 +1,23 @@
 # PM2 WebUI Setup Guide
 
-## ⚠️ IMPORTANT: How PM2 WebUI Works
+## ⚠️ IMPORTANT: Operating Modes
 
-**PM2 WebUI ONLY manages PM2 processes on the SAME machine where it's installed.**
+PM2 WebUI now supports two modes:
 
-It **CANNOT** remotely connect to PM2 on other VMs. Think of it as a web-based wrapper around the local PM2 CLI.
+- **hub**: full web dashboard + local PM2 + remote agent management
+- **agent**: token-protected API exposing local PM2 to hub
+
+Security constraints in hub mode:
+- Agent token must be at least 24 characters.
+- Remote base URL host must be `localhost` or private IPv4.
 
 ```
-┌─────────────────────────────────────┐
-│         VM1 (Production)            │
-│                                     │
-│  ┌──────────────────────────────┐  │
-│  │  Your Node.js Apps           │  │
-│  │  ├─ API Server (PM2)         │  │
-│  │  ├─ Worker (PM2)             │  │
-│  │  └─ WebSocket Server (PM2)   │  │
-│  └──────────────────────────────┘  │
-│                ▲                    │
-│                │ local PM2 API      │
-│  ┌─────────────┴────────────────┐  │
-│  │  PM2 WebUI                   │  │
-│  │  (Install HERE - on VM1)     │  │
-│  │  Manages VM1 apps only       │  │
-│  └──────────────────────────────┘  │
-│         Access via: http://VM1:4343 │
-└─────────────────────────────────────┘
-
-┌─────────────────────────────────────┐
-│         VM2 (Staging)               │
-│                                     │
-│  ┌──────────────────────────────┐  │
-│  │  Your Node.js Apps           │  │
-│  │  ├─ API Server (PM2)         │  │
-│  │  └─ Background Jobs (PM2)    │  │
-│  └──────────────────────────────┘  │
-│                ▲                    │
-│                │ local PM2 API      │
-│  ┌─────────────┴────────────────┐  │
-│  │  PM2 WebUI                   │  │
-│  │  (Install HERE TOO - on VM2) │  │
-│  │  Manages VM2 apps only       │  │
-│  └──────────────────────────────┘  │
-│         Access via: http://VM2:4343 │
-└─────────────────────────────────────┘
+VM1 (hub)  ---> controls local PM2 + VM2 agent + VM3 agent
+VM2 (agent) ---> exposes local PM2 via /agent/* with token
+VM3 (agent) ---> exposes local PM2 via /agent/* with token
 ```
+
+For quickest setup, use [QUICK_START.md](QUICK_START.md).
 
 ## Installation Approaches
 
