@@ -5,6 +5,8 @@
 const logger = async (ctx, next) => {
     const start = Date.now();
     const requestId = Math.random().toString(36).substring(7);
+    ctx.state.requestId = requestId;
+    ctx.set('X-Request-Id', requestId);
 
     // Log incoming request
     console.log(`[${requestId}] --> ${ctx.method} ${ctx.path}`, {
